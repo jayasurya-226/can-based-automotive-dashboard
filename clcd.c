@@ -70,3 +70,8 @@ void clcd_putch(const unsigned char data, unsigned char addr)
 	clcd_write(addr, INSTRUCTION_COMMAND);
 	clcd_write(data, DATA_COMMAND);
 }
+
+void clcd_clear()
+{
+    clcd_write(0x01, INSTRUCTION_COMMAND);
+}

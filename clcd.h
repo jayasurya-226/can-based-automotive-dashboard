@@ -32,5 +32,6 @@ void init_clcd(void);
 void clcd_print(const unsigned char *data, unsigned char addr);
 void clcd_putch(const unsigned char data, unsigned char addr);
 void clcd_write(unsigned char bit_values, unsigned char control_bit);
+void clcd_clear(void);
 
 #endif

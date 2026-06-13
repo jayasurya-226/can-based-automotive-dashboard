@@ -43,6 +43,8 @@ void init_can(void) {
 
     /* Set Receive Mode for buffers */
     RXB0CON = 0x00;
+    RXB0CONbits.RXM0 = 1;
+    RXB0CONbits.RXM1 = 1;
 }
 
 static uint16_t get_msg_id_std(void) {
@@ -98,11 +100,11 @@ void can_receive(uint16_t *msg_id, uint8_t *data, uint8_t *len) {
         for (int i = 0; i < *len; i++) {
             data[i] = ptr[i];
         }
+        
 
         RXB0FUL = 0; // Clear buffer flag
         RXB0IF = 0; // Clear interrupt flag   
     }
-
     // No data available.
     *len = 0;
 }
