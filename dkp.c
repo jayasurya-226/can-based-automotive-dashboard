@@ -1,5 +1,4 @@
 #include <xc.h>
-#include "ssd.h"
 #include "digital_keypad.h"
 
 void init_digital_keypad(void)

@@ -50,6 +50,7 @@ unsigned short read_adc(unsigned char channel)
 	/* Start the conversion */
 	GO = 1;
 	while (GO);
-	reg_val = (ADRESH << 8) | ADRESL;
+	reg_val = (ADRESH << 8) | ADRESL; 
+
 	return reg_val;
 }

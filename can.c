@@ -2,6 +2,7 @@
 /*File for CAN configuration , setting message id's, Data Transmission, */
 #include <xc.h>
 #include "can.h"
+#include "clcd.h"
 
 /* CAN operation mode values*/
 typedef enum _CanOpMode {

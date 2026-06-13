@@ -1,38 +1,54 @@
+
 #include "sensor.h"
 #include "adc.h"
 #include "can.h"
 #include "msg_id.h"
 #include "digital_keypad.h"
 
-uint16_t get_rpm(void) {
+uint16_t get_speed(unsigned char gear_pos) {
     uint16_t adc_val; // Variable to store ADC value
-    uint16_t rpm; // Variable to store calculated RPM
+    uint16_t speed; // Variable to store calculated speed
 
-    adc_val = read_adc(CHANNEL4); // Read ADC value from channel 4
+    adc_val = read_adc(SPEED_ADC_CHANNEL); // Read ADC value (0?1023)
 
-    rpm = (adc_val / 10.23) * 60; // Convert ADC value to RPM scale
+    speed = adc_val / 10.23; // Map ADC value to speed range (0?100)
 
-    return rpm; // Return calculated RPM
+    if (gear_pos == 7) // If collision gear is active
+        speed /= 5; // Reduce speed
+
+    // Clamp speed to maximum of 100
+    if (speed > 100)
+        speed = 100;
+
+    return speed; // Return final speed
 }
 
-IndicatorStatus process_indicator() {
-    // Implement the indicator function
-    static int indicator = 0x00; // Variable to store current indicator state
-    int key; // Variable to store pressed key
+unsigned char get_gear_pos(void) {
+    static unsigned char gear = 0; // Store gear position (start with GN)
+    unsigned char key; // Variable to store key input
 
     key = read_digital_keypad(STATE_CHANGE); // Read keypad state
 
-    if (key != ALL_RELEASED) // Check if any key is pressed
+    if (key != ALL_RELEASED) // If any key is pressed
     {
-        if (key == SWITCH1) // Left indicator switch
-            indicator = e_ind_left; // Set left indicator
-        else if (key == SWITCH2) // Right indicator switch
-            indicator = e_ind_right; // Set right indicator
-        else if (key == SWITCH3) // Hazard switch
-            indicator = e_ind_hazard; // Set hazard mode
-        else if (key == SWITCH4) // OFF switch
-            indicator = e_ind_off; // Turn OFF indicators
+        // If collision mode and any key is pressed ? go to GN
+        if (gear == 7 && (key == SWITCH1 || key == SWITCH2)) {
+            gear = 0; // Reset gear to GN
+        } else {
+            if (key == SWITCH1) // Gear up button
+            {
+                if (gear < 6) // Maximum gear is G6
+                    gear++; // Increment gear
+            } else if (key == SWITCH2) // Gear down button
+            {
+                if (gear > 0) // Minimum gear is GN
+                    gear--; // Decrement gear
+            } else if (key == SWITCH3) // Collision button
+            {
+                gear = 7; // Set gear to collision mode
+            }
+        }
     }
 
-    return indicator; // Return current indicator status
+    return gear; // Return current gear position
 }

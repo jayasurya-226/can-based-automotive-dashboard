@@ -1,68 +1,65 @@
-/*
- * File:   main.c
- * Author: banga
- *
- */
-
-// HEADER FILES
 #include <xc.h>
 #include "adc.h"
 #include "digital_keypad.h"
+#include "can.h"
 #include "sensor.h"
 #include "msg_id.h"
-#include "can.h"
 
-#define _XTAL_FREQ 20000000   // Set system clock frequency as per your crystal
+#define _XTAL_FREQ 20000000   // Define system clock frequency 
 
 /* ---------------- Function Prototypes ---------------- */
-void init_config(void); // Initialize all peripherals
-void rpm_to_bcd(unsigned int rpm, unsigned char *bcd); // Convert RPM to BCD format
+void init_config(void); // Function to initialize all peripherals
+void speed_to_bcd(unsigned int speed, unsigned char *bcd); // Convert speed to BCD format
 
-/* ---------------- INIT ---------------- */
+/* ---------------- Global Variables ---------------- */
+unsigned long int timer_count; // Global timer counter variable
+
+/* ---------------- Init ---------------- */
 void init_config(void) {
     init_adc(); // Initialize ADC module
-    init_digital_keypad(); // Initialize digital keypad
+    init_digital_keypad(); // Initialize keypad
     init_can(); // Initialize CAN module
 }
 
-/* ---------------- RPM ? BCD ---------------- */
+/* ---------------- SPEED ? BCD ---------------- */
 
 /*
-   RPM range: 0?6000
-
-   bcd[0] = thousands | hundreds
-   bcd[1] = tens | units
+   Speed range assumed: 0?999
+   BCD Format:
+   bcd[0] = hundreds | tens
+   bcd[1] = units | 0
  */
-void rpm_to_bcd(unsigned int rpm, unsigned char *bcd) {
-    unsigned char thousands, hundreds, tens, units; // Variables to store digits
+void speed_to_bcd(unsigned int speed, unsigned char *bcd) {
+    unsigned char hundreds, tens, units; // Variables to store digits
 
-    thousands = (rpm / 1000) % 10; // Extract thousands digit
-    hundreds = (rpm / 100) % 10; // Extract hundreds digit
-    tens = (rpm / 10) % 10; // Extract tens digit
-    units = rpm % 10; // Extract units digit
+    hundreds = (speed / 100) % 10; // Extract hundreds digit
+    tens = (speed / 10) % 10; // Extract tens digit
+    units = speed % 10; // Extract units digit
 
-    bcd[0] = (thousands << 4) | hundreds; // Pack thousands and hundreds into one byte
-    bcd[1] = (tens << 4) | units; // Pack tens and units into one byte
+    bcd[0] = (hundreds << 4) | tens; // Pack hundreds and tens into one byte
+    bcd[1] = (units << 4); // Pack units into high nibble
 }
 
 /* ---------------- MAIN ---------------- */
-void main(void) {
-    unsigned char indicator; // Variable to store indicator status
-    unsigned int rpm; // Variable to store RPM value
-    unsigned char data[2]; // BCD needs only 2 bytes
-
+int main(void) {
     init_config(); // Initialize system
 
+    unsigned int speed = 0; // Variable to store speed
+    unsigned char gear_pos = 0; // Variable to store gear position
+    unsigned char data[2]; // BCD uses only 2 bytes
+
     while (1) {
-        /* Read indicator */
-        indicator = process_indicator(); // Get current indicator state
-        can_transmit(INDICATOR_MSG_ID, &indicator, 1); // Send indicator data via CAN
         __delay_ms(10); // Small delay
 
-        /* Read RPM and send as BCD */
-        rpm = get_rpm(); // Get RPM value (0?6000)
-        rpm_to_bcd(rpm, data); // Convert RPM to BCD
-        can_transmit(RPM_MSG_ID, data, 2); // Send RPM data via CAN
+        /* Read Gear Position */
+        gear_pos = get_gear_pos(); // Read current gear
+        can_transmit(GEAR_MSG_ID, &gear_pos, 1); // Send gear via CAN
+
         __delay_ms(10); // Small delay
+
+        /* Read Speed and Send as BCD */
+        speed = get_speed(gear_pos); // Get speed based on gear
+        speed_to_bcd(speed, data); // Convert speed to BCD
+        can_transmit(SPEED_MSG_ID, data, 2); // Send speed via CAN
     }
 }
